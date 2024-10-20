@@ -136,7 +136,7 @@ bool ModrinthCreationTask::updateInstance()
         }
 
         auto old_client_overrides = Override::readOverrides("client-overrides", old_index_folder);
-        for (const auto& entry : old_overrides) {
+        for (const auto& entry : old_client_overrides) {
             if (entry.isEmpty())
                 continue;
             qDebug() << "Scheduling" << entry << "for removal";
@@ -301,8 +301,15 @@ bool ModrinthCreationTask::createInstance()
 
     loop.exec();
 
+    if (!ended_well) {
+        for (auto m : mods) {
+            delete m;
+        }
+        return ended_well;
+    }
+
     QEventLoop ensureMetaLoop;
-    QDir folder = FS::PathCombine(m_stagingPath, "minecraft", "mods", ".index");
+    QDir folder = FS::PathCombine(instance.modsRoot(), ".index");
     auto ensureMetadataTask = makeShared<EnsureMetadataTask>(mods, folder, ModPlatform::ResourceProvider::MODRINTH);
     connect(ensureMetadataTask.get(), &Task::succeeded, this, [&]() { ended_well = true; });
     connect(ensureMetadataTask.get(), &Task::finished, &ensureMetaLoop, &QEventLoop::quit);
